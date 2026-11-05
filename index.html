@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Life Tracker</title>
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png"><meta name="theme-color" content="#14213d"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Life Tracker"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f2f4f7;--card:#fff;--ink:#14213d;--mut:#6b7686;--line:#e2e6ec;--Studio:#2f6fed;--Lettura:#1f9d6b;--Tesi:#7c4dce;--ex:#e8590c;--bad:#d62839}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f1420;--card:#182033;--ink:#e8ecf4;--mut:#93a0b5;--line:#2a3550;--Studio:#5b8dff;--Lettura:#3cc58f;--Tesi:#a07df0;--ex:#ff8a4c;--bad:#ff6b7a}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif;display:flex;min-height:100vh}
+nav{width:200px;padding:20px 12px;border-right:1px solid var(--line);background:var(--card);position:sticky;top:0;height:100vh;flex:none}
+nav h1{font-size:18px;margin:0 8px 18px;letter-spacing:-.3px}
+nav button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--mut);padding:10px 12px;border-radius:10px;font:inherit;cursor:pointer;margin-bottom:2px}
+nav button.on{background:var(--ink);color:var(--bg);font-weight:600}
+main{flex:1;padding:24px;max-width:1000px;min-width:0}
+h2{margin:0 0 16px;font-size:24px;letter-spacing:-.4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.kpi b{display:block;font-size:26px;letter-spacing:-.5px}.kpi span,.mut{color:var(--mut);font-size:13px}
+.bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;border-radius:6px}
+input,select,button.b{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}
+button.b{cursor:pointer;background:var(--ink);color:var(--bg);border:0;font-weight:600}button.g{background:none;color:var(--ink);border:1px solid var(--line)}
+button.d{color:var(--bad)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--Studio);outline-offset:1px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.row label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:480px}td,th{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:14px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.cal{display:grid;grid-template-columns:44px repeat(7,1fr);min-width:640px;position:relative}
+.cal .h{font-size:12px;text-align:center;padding:6px;color:var(--mut);border-bottom:1px solid var(--line)}
+.cal .t{font-size:11px;color:var(--mut);height:40px;text-align:right;padding-right:4px}
+.cal .c{position:relative;border-left:1px solid var(--line)}.cal .c div.hr{height:40px;border-bottom:1px solid var(--line);cursor:pointer}
+.ev{position:absolute;left:2px;right:2px;border-radius:7px;color:#fff;font-size:11px;padding:3px 5px;overflow:hidden;cursor:pointer;line-height:1.2}
+.pie{width:150px;height:150px;border-radius:50%}
+.ex{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.big{font-size:44px;font-weight:700;letter-spacing:-1px;line-height:1}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}.toast.s{opacity:1}
+@media (max-width:760px){body{flex-direction:column}nav{width:100%;height:auto;position:sticky;top:0;z-index:5;display:flex;gap:4px;overflow-x:auto;padding:10px;border-right:0;border-bottom:1px solid var(--line)}nav h1{display:none}nav button{width:auto;white-space:nowrap;margin:0}main{padding:14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<nav id="nav"></nav><main id="m"></main><div class="toast" id="toast"></div>
+<script>
+const CATS=["Studio","Lettura","Tesi"],GD=["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"],GS=["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+const VIEWS={dash:"Dashboard",att:"Attività",set:"Settimana",stat:"Statistiche",ex:"Esercizi",sport:"Sport"};
+const pad=n=>String(n).padStart(2,"0"),iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()),today=()=>iso(new Date());
+const pd=s=>{const[a,b,c]=s.split("-");return new Date(+a,b-1,+c)},addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return iso(d)};
+const mins=t=>{const[h,m]=t.split(":");return +h*60+ +m},hm=m=>Math.floor(m/60)+"h "+pad(m%60)+"m",uid=()=>Math.random().toString(36).slice(2,10);
+const mondayOf=s=>{const d=pd(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return iso(d)};
+/* ---- Stato: unica fonte dati = acts (attività). Esercizi = challenge ---- */
+let S={acts:[],goals:{Studio:120,Lettura:30,Tesi:60},ch:{start:today(),ex:["Squat","Sit-up","Push-up"].map(n=>({id:uid(),name:n,target:100,days:{},debts:[]}))}};
+try{const r=localStorage.getItem("lifetracker");if(r)S=JSON.parse(r)}catch(e){}
+S.sports=S.sports||[];S.sess=S.sess||[];let selSport=null;
+let view="dash",edit=null,wk=mondayOf(today());
+function save(){try{localStorage.setItem("lifetracker",JSON.stringify(S))}catch(e){}render()}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.className="toast s";setTimeout(()=>e.className="toast",1800)}
+/* ---- Calcoli derivati dalle attività ---- */
+const sumBy=(f)=>{const o={Studio:0,Lettura:0,Tesi:0};S.acts.filter(f).forEach(a=>o[a.cat]+=a.dur);return o};
+const tot=o=>o.Studio+o.Lettura+o.Tesi;
+function streak(){const ds=new Set(S.acts.map(a=>a.date));let d=today(),n=0;if(!ds.has(d))d=addD(d,-1);while(ds.has(d)){n++;d=addD(d,-1)}return n}
+/* ---- Calcolo debiti challenge ---- */
+function chStat(x){let debt=0,t=today();for(let d=S.ch.start;d<t;d=addD(d,1))debt=Math.max(0,debt+x.target-(x.days[d]||0));
+ const dn=x.days[t]||0,rem=Math.max(0,x.target-dn),surplus=Math.max(0,dn-x.target),auto=Math.max(0,debt-surplus),man=x.debts.reduce((s,q)=>s+q.n,0);
+ return{dn,rem,auto,man,owed:auto+man}}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+/* ---- Viste ---- */
+function vDash(){const t=today(),wd=mondayOf(t),T=sumBy(a=>a.date===t),W=sumBy(a=>a.date>=wd&&a.date<=addD(wd,6));
+ const done=CATS.filter(c=>T[c]>=S.goals[c]*0+0&&T[c]>=dailyGoal(c)).length;
+ return `<h2>Dashboard</h2><div class="grid">
+ <div class="card kpi"><b>${hm(tot(T))}</b><span>Oggi</span></div><div class="card kpi"><b>${hm(tot(W))}</b><span>Questa settimana</span></div>
+ <div class="card kpi"><b>${streak()} 🔥</b><span>Giorni di fila</span></div><div class="card kpi"><b>${done}/3</b><span>Obiettivi di oggi completati</span></div></div>
+ <div class="card"><b>Obiettivi di oggi</b> <span class="mut">(minuti, modificabili)</span>${CATS.map(c=>{const g=dailyGoal(c),p=Math.min(100,T[c]/g*100);return `<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;gap:8px"><span><i class="dot" style="background:var(--${c})"></i>${c} · ${hm(T[c])} su <input type="number" min="1" value="${g}" style="width:70px" onchange="setGoal('${c}',this.value)"> min</span><b>${Math.round(p)}%</b></div><div class="bar"><i style="width:${p}%;background:var(--${c})"></i></div></div>`}).join("")}</div>
+ <div class="card"><b>Ore della settimana per categoria</b>${bars(W)}</div>`}
+const dailyGoal=c=>S.goals[c];
+function setGoal(c,v){S.goals[c]=Math.max(1,+v||1);save()}
+function bars(o){const mx=Math.max(1,...CATS.map(c=>o[c]));return CATS.map(c=>`<div style="margin-top:10px"><span class="mut">${c} · ${hm(o[c])}</span><div class="bar" style="height:14px"><i style="width:${o[c]/mx*100}%;background:var(--${c})"></i></div></div>`).join("")}
+function vAtt(){const e=edit?S.acts.find(a=>a.id===edit):null,q=(window._q||"").toLowerCase();
+ const rows=[...S.acts].filter(a=>(a.cat+a.notes+a.date).toLowerCase().includes(q)).sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+ return `<h2>Attività</h2><div class="card"><div class="row">
+ <label>Categoria<select id="fc">${CATS.map(c=>`<option ${e&&e.cat===c?"selected":""}>${c}</option>`).join("")}</select></label>
+ <label>Data<input type="date" id="fd" value="${e?e.date:today()}"></label>
+ <label>Inizio<input type="time" id="fs" value="${e?e.start:new Date().toTimeString().slice(0,5)}"></label>
+ <label>Durata (min)<input type="number" min="1" id="fu" style="width:90px" value="${e?e.dur:25}"></label>
+ <label>Note<input id="fn" value="${e?esc(e.notes):""}"></label>
+ <button class="b" onclick="saveAct()">${e?"Salva modifica":"Registra attività"}</button>${e?`<button class="b g" onclick="edit=null;render()">Annulla</button>`:""}</div></div>
+ <div class="card"><input placeholder="Cerca…" value="${esc(window._q||"")}" oninput="window._q=this.value;render(1)" id="q"><div class="tw"><table><tr><th>Attività</th><th>Giorno</th><th>Data</th><th>Ora</th><th>Durata</th><th>Note</th><th></th></tr>
+ ${rows.map(a=>`<tr><td><i class="dot" style="background:var(--${a.cat})"></i>${a.cat}</td><td>${GD[pd(a.date).getDay()]}</td><td>${a.date}</td><td>${a.start}–${endT(a)}</td><td>${a.dur} min</td><td>${esc(a.notes)}</td><td><button class="b g" onclick="edit='${a.id}';render()">Modifica</button> <button class="b g d" onclick="delAct('${a.id}')">Elimina</button></td></tr>`).join("")||`<tr><td colspan="7" class="mut">Nessuna attività: registrane una qui sopra.</td></tr>`}</table></div></div>`}
+const endT=a=>{const m=Math.min(1440,mins(a.start)+a.dur);return m===1440?"24:00":pad(Math.floor(m/60))+":"+pad(m%60)}
+function saveAct(){const a={id:edit||uid(),cat:fc.value,date:fd.value,start:fs.value,dur:Math.max(1,+fu.value||0),notes:fn.value};if(!a.date||!a.start)return toast("Inserisci data e ora");
+ S.acts=S.acts.filter(x=>x.id!==a.id).concat(a);edit=null;save();toast("Attività salvata")}
+function delAct(id){S.acts=S.acts.filter(a=>a.id!==id);save();toast("Attività eliminata")}
+/* Vista settimanale: generata dalle attività, nessun dato proprio */
+function vSet(){const days=[...Array(7)].map((_,i)=>addD(wk,i));let cols="";
+ days.forEach(d=>{const ev=S.acts.filter(a=>a.date===d).sort((a,b)=>a.start.localeCompare(b.start));let lanes=[];
+  const html=ev.map(a=>{const s=mins(a.start),e=Math.min(1440,s+a.dur);let l=lanes.findIndex(x=>x<=s);if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=e;a._l=l;a._s=s;a._e=e;return a}).map(a=>{const n=Math.max(1,lanes.length);return `<div class="ev" onclick="edit='${a.id}';view='att';render()" title="${a.cat} ${a.start}–${endT(a)}" style="background:var(--${a.cat});top:${a._s/60*40}px;height:${Math.max(16,(a._e-a._s)/60*40-2)}px;left:calc(${a._l/n*100}% + 2px);width:calc(${100/n}% - 4px);right:auto">${a.cat}<br>${a.start}</div>`}).join("");
+  cols+=`<div class="c">${[...Array(24)].map((_,h)=>`<div class="hr" onclick="quick('${d}',${h})"></div>`).join("")}${html}</div>`});
+ return `<h2>Settimana</h2><div class="card"><div class="row" style="margin-bottom:10px"><button class="b g" onclick="wk=addD(wk,-7);render()">←</button><b>${wk} → ${addD(wk,6)}</b><button class="b g" onclick="wk=addD(wk,7);render()">→</button><button class="b g" onclick="wk=mondayOf(today());render()">Oggi</button></div>
+ <div class="tw" id="calw" style="max-height:70vh;overflow-y:auto"><div class="cal"><div class="h"></div>${days.map((d,i)=>`<div class="h">${GS[i]} ${d.slice(8)}</div>`).join("")}
+ <div>${[...Array(24)].map((_,h)=>`<div class="t">${pad(h)}:00</div>`).join("")}</div>${cols}</div></div>
+ <p class="mut">Ogni blocco è un’attività registrata. Tocca una fascia vuota per aggiungerne una, tocca un blocco per modificarla.</p></div>`}
+function quick(d,h){const c=prompt("Categoria (Studio, Lettura o Tesi):","Studio");if(!CATS.includes(c))return c&&toast("Categoria non valida");const m=+prompt("Durata in minuti:","60");if(!m)return;
+ S.acts.push({id:uid(),cat:c,date:d,start:pad(h)+":00",dur:m,notes:""});save()}
+function vStat(){const A=sumBy(()=>true),n=S.acts.length,T=tot(A),days=new Set(S.acts.map(a=>a.date)).size;
+ const byDay={};S.acts.forEach(a=>byDay[a.date]=(byDay[a.date]||0)+a.dur);const best=Object.entries(byDay).sort((a,b)=>b[1]-a[1])[0];
+ let acc=0;const g=CATS.map(c=>{const s=acc;acc+=T?A[c]/T*100:0;return `var(--${c}) ${s}% ${acc}%`}).join(",");
+ const wm={};S.acts.forEach(a=>{const w=mondayOf(a.date);wm[w]=(wm[w]||0)+a.dur});const ws=Object.keys(wm).sort().slice(-8);const mx=Math.max(1,...ws.map(w=>wm[w]));
+ return `<h2>Statistiche</h2><div class="grid"><div class="card kpi"><b>${hm(T)}</b><span>Tempo totale</span></div><div class="card kpi"><b>${n}</b><span>Attività</span></div>
+ <div class="card kpi"><b>${days?hm(Math.round(T/days)):"–"}</b><span>Media nei giorni attivi</span></div><div class="card kpi"><b>${best?hm(best[1]):"–"}</b><span>Giornata migliore ${best?best[0]:""}</span></div></div>
+ <div class="card"><b>Ore per categoria</b>${bars(A)}</div>
+ <div class="card" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap"><div class="pie" style="background:conic-gradient(${T?g:"var(--line) 0 100%"})"></div><div>${CATS.map(c=>`<div><i class="dot" style="background:var(--${c})"></i>${c}: ${T?Math.round(A[c]/T*100):0}%</div>`).join("")}</div></div>
+ <div class="card"><b>Ultime settimane</b><div style="display:flex;gap:8px;align-items:end;height:120px;margin-top:10px">${ws.map(w=>`<div style="flex:1;text-align:center"><div style="height:${wm[w]/mx*90}px;background:var(--Studio);border-radius:6px 6px 0 0"></div><span class="mut" style="font-size:11px">${w.slice(5)}</span></div>`).join("")||'<span class="mut">Nessun dato.</span>'}</div></div>`}
+/* Esercizi: 100 Challenge con debiti */
+function vEx(){const t=today();return `<h2>Esercizi · 100 Challenge</h2>
+ <div class="card"><div class="row"><label>Giorno di inizio<input type="date" value="${S.ch.start}" onchange="S.ch.start=this.value;save()"></label>
+ <button class="b g" onclick="expo()">Esporta backup</button><label>Importa backup<input type="file" accept=".json" onchange="impo(this)"></label></div>
+ <p class="mut" style="margin:10px 0 0">Ogni giorno non completato genera un debito. Le ripetizioni oltre l’obiettivo del giorno riducono prima i debiti automatici. I debiti manuali si cancellano uno a uno.</p></div>
+ <div class="ex">${S.ch.ex.map(x=>{const s=chStat(x);return `<div class="card"><div class="row" style="justify-content:space-between"><input value="${esc(x.name)}" style="font-weight:700;width:130px" onchange="rename('${x.id}',this.value)"><span class="mut">obiettivo <input type="number" min="1" value="${x.target}" style="width:64px" onchange="tgt('${x.id}',this.value)"></span></div>
+ <div style="margin:14px 0"><span class="big" style="color:var(--ex)">${s.dn}</span><span class="mut"> / ${x.target} oggi</span><div class="bar"><i style="width:${Math.min(100,s.dn/x.target*100)}%;background:var(--ex)"></i></div></div>
+ <div class="row"><button class="b" onclick="add('${x.id}',1)">+1</button><button class="b" onclick="add('${x.id}',10)">+10</button><button class="b g" onclick="add('${x.id}',-1)">−1</button><input id="c${x.id}" type="number" placeholder="altro" style="width:70px"><button class="b g" onclick="add('${x.id}',+document.getElementById('c${x.id}').value||0)">Aggiungi</button></div>
+ <p style="margin:14px 0 4px"><b style="color:${s.owed?"var(--bad)":"var(--Lettura)"}">${s.owed?"Debito: "+s.owed:"In pari 💪"}</b> <span class="mut">(automatico ${s.auto} + manuale ${s.man})</span></p>
+ <p class="mut" style="margin:0">Mancano oggi ${s.rem}${s.owed?" · per recuperare ne servono "+(s.rem+s.owed):""}</p>
+ <details style="margin-top:10px"><summary>Debiti manuali e storico</summary>
+ ${x.debts.map(q=>`<div class="row" style="margin:6px 0"><span>${q.n} rip. ${esc(q.note)}</span><button class="b g d" onclick="delDebt('${x.id}','${q.id}')">Cancella</button></div>`).join("")||'<p class="mut">Nessun debito manuale.</p>'}
+ <div class="row"><input id="dn${x.id}" type="number" min="1" placeholder="ripetizioni" style="width:100px"><input id="dt${x.id}" placeholder="nota"><button class="b g" onclick="addDebt('${x.id}')">Aggiungi debito</button></div>
+ <div class="row" style="margin-top:10px"><label>Correggi un giorno<input type="date" id="dd${x.id}" max="${t}" value="${t}"></label><label>Eseguite<input type="number" min="0" id="dv${x.id}" style="width:80px"></label><button class="b g" onclick="setDay('${x.id}')">Salva giorno</button></div>
+ </details></div>`}).join("")}</div>`}
+const X=id=>S.ch.ex.find(x=>x.id===id);
+function add(id,n){const x=X(id),t=today();x.days[t]=Math.max(0,(x.days[t]||0)+n);save()}
+function rename(id,v){X(id).name=v||"Esercizio";save()}function tgt(id,v){X(id).target=Math.max(1,+v||100);save()}
+function addDebt(id){const n=+document.getElementById("dn"+id).value;if(n<1)return toast("Inserisci le ripetizioni");X(id).debts.push({id:uid(),n,note:document.getElementById("dt"+id).value});save();toast("Debito aggiunto")}
+function delDebt(id,q){const x=X(id);x.debts=x.debts.filter(d=>d.id!==q);save();toast("Debito cancellato")}
+function setDay(id){const d=document.getElementById("dd"+id).value,v=document.getElementById("dv"+id).value;if(!d||v==="")return toast("Scegli giorno e ripetizioni");X(id).days[d]=Math.max(0,+v);save();toast("Giorno aggiornato")}
+function expo(){try{const u=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:"application/json"})),a=document.createElement("a");a.href=u;a.download="lifetracker_backup_"+today()+".json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u)}catch(e){toast("Download non disponibile qui: usa la versione scaricata")}}
+function impo(i){const f=i.files[0];if(!f)return;f.text().then(t=>{try{const o=JSON.parse(t);if(!o.acts||!o.ch)throw 0;S=o;save();toast("Backup importato")}catch(e){toast("File di backup non valido")}})}
+/* ---- Sport: sport e schede personalizzate ---- */
+const KINDS={att:"Lanci o prove (m)",set:"Serie (rip × kg)",run:"Corsa (km × min)"},PH={att:"es. 52.3, 54.1, 53.0",set:"es. 8x60, 8x60, 6x65",run:"es. 5x28"};
+function sumItem(it,raw){const p=String(raw||"").split(/[,;]/).map(s=>s.trim()).filter(Boolean);
+ if(it.kind==="att"){const v=p.map(parseFloat).filter(n=>!isNaN(n));return v.length?{n:Math.max(...v),t:"migliore "+Math.max(...v)+" m su "+v.length+" prove"}:null}
+ if(it.kind==="set"){let vol=0,c=0;p.forEach(s=>{const[a,b]=s.toLowerCase().split("x").map(parseFloat);if(a>0){vol+=a*(b||0);c++}});return c?{n:vol,t:c+" serie, volume "+vol+" kg"}:null}
+ const[km,mn]=String(raw||"").toLowerCase().split(/x/).map(parseFloat);return km>0?{n:km,t:km+" km"+(mn?" in "+mn+" min":"")}:null}
+const SP=()=>S.sports.find(s=>s.id===selSport)||S.sports[0],SH=(sp,id)=>sp.sheets.find(x=>x.id===id);
+function vSport(){S.sports=S.sports||[];S.sess=S.sess||[];const sp=SP();if(sp)selSport=sp.id;
+ let h=`<h2>Sport</h2><div class="card"><div class="row">${S.sports.map(s=>`<button class="b ${s.id===selSport?"":"g"}" onclick="selSport='${s.id}';render()">${esc(s.name)}</button>`).join("")}<button class="b g" onclick="addSport()">+ Nuovo sport</button></div>${sp?"":'<p class="mut">Aggiungi il tuo primo sport, ad esempio Lancio del disco o Getto del peso.</p>'}</div>`;
+ if(!sp)return h;
+ const sh=SH(sp,window._sh)||sp.sheets[0];
+ h+=`<div class="card"><div class="row" style="justify-content:space-between"><b>Schede di ${esc(sp.name)}</b><span class="row"><button class="b g" onclick="addSheet()">+ Nuova scheda</button><button class="b g d" onclick="delSport()">Elimina sport</button></span></div>`+(sp.sheets.map(x=>`<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><div class="row" style="justify-content:space-between"><b>${esc(x.name)}</b><button class="b g d" onclick="delSheet('${x.id}')">Elimina scheda</button></div>${x.items.map(it=>`<div class="row" style="margin:4px 0"><span>${esc(it.name)} <span class="mut">· ${KINDS[it.kind]}</span></span><button class="b g d" onclick="delItem('${x.id}','${it.id}')">×</button></div>`).join("")||'<p class="mut">Nessun esercizio: aggiungine uno.</p>'}<div class="row"><input id="in${x.id}" placeholder="Nome esercizio"><select id="ik${x.id}">${Object.entries(KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select><button class="b g" onclick="addItem('${x.id}')">Aggiungi</button></div></div>`).join("")||'<p class="mut">Crea una scheda, ad esempio “Tecnica” o “Forza”.</p>')+`</div>`;
+ if(sh&&sh.items.length)h+=`<div class="card"><b>Registra allenamento</b><div class="row" style="margin:8px 0"><label>Scheda<select onchange="window._sh=this.value;render()">${sp.sheets.map(x=>`<option value="${x.id}" ${x.id===sh.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label><label>Data<input type="date" id="sdt" value="${today()}"></label></div>${sh.items.map(it=>`<label class="mut" style="display:block;margin-top:8px">${esc(it.name)}<input id="si_${it.id}" placeholder="${PH[it.kind]}" style="width:100%"></label>`).join("")}<div class="row" style="margin-top:10px"><input id="snt" placeholder="Note" style="flex:1"><button class="b" onclick="saveSess('${sp.id}','${sh.id}')">Registra allenamento</button></div></div>`;
+ const ss=S.sess.filter(s=>s.sp===sp.id).sort((a,b)=>b.date.localeCompare(a.date)),pb={};ss.forEach(s=>s.res.forEach(r=>{if(!pb[r.name]||r.n>pb[r.name].n)pb[r.name]={n:r.n,t:r.t,date:s.date}}));
+ if(ss.length)h+=`<div class="card"><b>Record personali</b>${Object.entries(pb).map(([k,v])=>`<div class="mut">${esc(k)}: ${v.t} · ${v.date}</div>`).join("")}</div>`;
+ h+=`<div class="card"><b>Storico allenamenti</b>${ss.map(s=>`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px"><div class="row" style="justify-content:space-between"><span><b>${s.date}</b> · ${esc(s.sname)}</span><button class="b g d" onclick="delSess('${s.id}')">Elimina</button></div>${s.res.map(r=>`<div class="mut">${esc(r.name)}: ${r.t}</div>`).join("")}${s.note?`<div class="mut">${esc(s.note)}</div>`:""}</div>`).join("")||'<p class="mut">Nessun allenamento registrato.</p>'}</div>`;
+ return h}
+function addSport(){const n=(prompt("Nome dello sport (es. Lancio del disco):")||"").trim();if(!n)return;const s={id:uid(),name:n,sheets:[]};S.sports.push(s);selSport=s.id;save()}
+function delSport(){const sp=SP();if(!sp||!confirm("Eliminare "+sp.name+" con schede e storico?"))return;S.sports=S.sports.filter(s=>s.id!==sp.id);S.sess=S.sess.filter(s=>s.sp!==sp.id);selSport=null;save()}
+function addSheet(){const n=(prompt("Nome della scheda (es. Tecnica):")||"").trim();if(!n)return;const x={id:uid(),name:n,items:[]};SP().sheets.push(x);window._sh=x.id;save()}
+function delSheet(id){const sp=SP();if(!confirm("Eliminare la scheda?"))return;sp.sheets=sp.sheets.filter(x=>x.id!==id);window._sh=null;save()}
+function addItem(id){const n=document.getElementById("in"+id).value.trim();if(!n)return toast("Scrivi il nome dell’esercizio");SH(SP(),id).items.push({id:uid(),name:n,kind:document.getElementById("ik"+id).value});window._sh=id;save()}
+function delItem(sid,id){const x=SH(SP(),sid);x.items=x.items.filter(i=>i.id!==id);save()}
+function saveSess(spId,shId){const sp=SP(),x=SH(sp,shId),res=[];x.items.forEach(it=>{const r=sumItem(it,document.getElementById("si_"+it.id).value);if(r)res.push({name:it.name,t:r.t,n:r.n})});
+ if(!res.length)return toast("Compila almeno un esercizio");S.sess.push({id:uid(),sp:spId,sname:x.name,date:document.getElementById("sdt").value||today(),note:document.getElementById("snt").value,res});save();toast("Allenamento registrato")}
+function delSess(id){S.sess=S.sess.filter(s=>s.id!==id);save()}
+function render(keep){const fn={dash:vDash,att:vAtt,set:vSet,stat:vStat,ex:vEx,sport:vSport}[view];
+ document.getElementById("nav").innerHTML="<h1>Life Tracker</h1>"+Object.entries(VIEWS).map(([k,v])=>`<button class="${k===view?"on":""}" onclick="view='${k}';render()">${v}</button>`).join("");
+ document.getElementById("m").innerHTML=fn();
+ if(keep){const q=document.getElementById("q");if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}
+ if(view==="set"){const c=document.getElementById("calw");if(c)c.scrollTop=7*40}}
+/* Offline: registra il service worker (serve HTTPS o localhost) */
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+render();
+</script></body></html>
